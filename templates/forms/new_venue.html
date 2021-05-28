@@ -50,7 +50,7 @@
        </div>
 
        <div class="form-group">
-             <label for="seeking_talent">Looking for Talent*</label>
+             <label for="seeking_talent">Looking for Talent</label>
              {{ form.seeking_talent(class_ = 'form-control', placeholder='Venue', autofocus = true) }}
        </div>
 
@@ -60,37 +60,5 @@
        </div>
       <input type="submit" value="Create Venue" class="btn btn-primary btn-lg btn-block">
     </form>
-    <script>
-      document.getElementById('form').onsubmit = function(e) {
-                  e.preventDefault();
-                  fetch('/venues/create', {
-                      method: 'POST',
-                      body: JSON.stringify({
-                          'name' : document.getElementById('name').value,
-                          'city' : document.getElementById('city').value,
-                          'state' : document.getElementById('state').value,
-                          'address' : document.getElementById('address').value,
-                          'phone' : document.getElementById('phone').value,
-                          'facebook_link' : document.getElementById('facebook_link').value,
-                          'image_link' : document.getElementById('image_link').value,
-                          'website_link' : document.getElementById('website_link').value,
-                          'seeking_talent' : document.getElementById('seeking_talent').value,
-                          'seeking_description' : document.getElementById('seeking_description').value
-                      }),
-                      headers: {
-                          'Content-Type' : 'application/json'
-                      }
-                  })
-                  .then(function(response) {
-                      return response.json();
-                  })
-                  .then(function(jsonResponse) {
-  
-                  })
-                  .catch(function() {
-                      
-                  })
-              }
-    </script>
   </div>
 {% endblock %}

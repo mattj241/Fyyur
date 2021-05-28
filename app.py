@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------#
 
 import json
+from operator import ge
 import dateutil.parser
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort
@@ -41,16 +42,12 @@ class Venue(db.Model):
   state = db.Column(db.String(120), nullable = False)
   address = db.Column(db.String(120), nullable = False)
   phone = db.Column(db.String(120), nullable = False)
+  genres = db.Column(db.String, nullable = False)
   image_link = db.Column(db.String(500))
   facebook_link = db.Column(db.String(120))
   website_link = db.Column(db.String(120))
   seeking_talent = db.Column(db.Boolean, nullable = False)
   seeking_description = db.Column(db.String)
-
-  # image_link = request.get_json()['image_link']
-  # website_link = request.get_json()['website_link']
-  # seeking_talent = request.get_json()['seeking_talent']
-  # seeking_description = request.get_json()['seeking_description']
 
   # TODO-DONE: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -236,37 +233,30 @@ def create_venue_form():
 
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
-  # TODO: insert form data as a new Venue record in the db, instead
-  # TODO: modify data to be the data object returned from db insertion
   error = False
-  # seeking_talent = ''
   try:
-    name = request.get_json()['name']
-    city = request.get_json()['city']
-    state = request.get_json()['state']
-    address = request.get_json()['address']
-    phone = request.get_json()['phone']
-    facebook_link = request.get_json()['facebook_link']
-    image_link = request.get_json()['image_link']
-    website_link = request.get_json()['website_link']
-    seeking_talent_temp = request.get_json()['seeking_talent']
-    if (seeking_talent_temp == 'y'):
-      seeking_talent = True
-    else:
-      seeking_talent = False
-    # seeking_talent = "richard"
-    seeking_description = request.get_json()['seeking_description']
-    newVenue = Venue(name=name, city=city, state=state, address=address, phone=phone,
+    form = VenueForm(request.form)
+    name = form.name.data
+    city = form.city.data
+    state = form.state.data
+    address = form.address.data
+    phone = form.phone.data
+    genres = form.genres.data
+    facebook_link = form.facebook_link.data
+    image_link = form.image_link.data
+    website_link = form.website_link.data
+    seeking_talent = form.seeking_talent.data
+    seeking_description = form.seeking_description.data
+    newVenue = Venue(name=name, city=city, state=state, address=address, phone=phone, genres=genres,
                     facebook_link=facebook_link, image_link=image_link, website_link=website_link,
                     seeking_talent=seeking_talent, seeking_description=seeking_description)
     db.session.add(newVenue)
     db.session.commit()
-    # on successful db insert, flash success
-    flash('Venue ' + request.get_json()['name'] + ' was successfully listed!')
+
+    flash('Venue ' + name + ' was successfully listed!')
   except:
     error = True
-    # TODO: on unsuccessful db insert, flash an error instead.
-    flash('An error occurred. Venue ' + request.get_json()['name'] + ' could not be listed.')
+    flash('An error occurred. Venue ' + name + ' could not be listed.')
     db.session.rollback()
     print (sys.exc_info())
   finally:
