@@ -2,7 +2,6 @@
 # Imports
 #----------------------------------------------------------------------------#
 
-import json
 from operator import ge
 from threading import Timer
 from types import FunctionType
@@ -21,6 +20,7 @@ from sqlalchemy.orm import backref, relationship
 import sys
 from datetime import datetime
 import re
+from models import Show, Venue, Artist
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -32,62 +32,15 @@ moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-
-# TODO-DONE: connect to a local postgresql database
-
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-class Venue(db.Model):
-  __tablename__ = 'venue'
-
-  id = db.Column(db.Integer, primary_key=True)
-  name = db.Column(db.String, nullable = False)
-  city = db.Column(db.String(120), nullable = False)
-  state = db.Column(db.String(120), nullable = False)
-  address = db.Column(db.String(120), nullable = False)
-  phone = db.Column(db.String(120), nullable = False)
-  genres = db.Column(db.String, nullable = False)
-  image_link = db.Column(db.String(500))
-  facebook_link = db.Column(db.String(120))
-  website_link = db.Column(db.String(120))
-  seeking_talent = db.Column(db.Boolean)
-  seeking_description = db.Column(db.String)
-  v_shows = db.relationship('Show', backref='venue')
-
-
-class Artist(db.Model):
-  __tablename__ = 'artist'
-
-  id = db.Column(db.Integer, primary_key=True)
-  name = db.Column(db.String, nullable = False)
-  city = db.Column(db.String(120), nullable = False)
-  state = db.Column(db.String(120), nullable = False)
-  phone = db.Column(db.String(120), nullable = False)
-  genres = db.Column(db.String(120), nullable = False)
-  image_link = db.Column(db.String(500))
-  facebook_link = db.Column(db.String(120))
-  website_link = db.Column(db.String(120))
-  seeking_venue = db.Column(db.Boolean)
-  seeking_description = db.Column(db.String)
-  a_shows = db.relationship('Show', backref='artist')
-
-class Show(db.Model):
-  __tablename__ = 'shows'
-
-  venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), primary_key=True)
-  artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'), primary_key=True)
-  start_time = db.Column(db.DateTime, nullable=False)
-
 db.create_all()
 
 #----------------------------------------------------------------------------#
 # Helpers.
 #----------------------------------------------------------------------------#
-def get_upcoming_shows_list_artist(artist_input):
+def get_upcoming_shows_list(artist_input):
   upcoming_shows_list = []
-  upcoming_shows = Show.query.filter_by(venue_id=artist_input.id).filter(datetime.utcnow() <= Show.start_time)
+  # Submission 1: upcoming_shows = Show.query.filter_by(venue_id=artist_input.id).filter(datetime.utcnow() <= Show.start_time)
+  upcoming_shows = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_input.id).filter(Show.start_time<=datetime.now()).all()
   for show in upcoming_shows:
     venue_hosting_show = Artist.query.filter_by(id=show.artist_id).first()
     show_dict = {
@@ -99,9 +52,10 @@ def get_upcoming_shows_list_artist(artist_input):
     upcoming_shows_list.append(show_dict)
   return upcoming_shows_list
 
-def get_past_shows_list_artist(artist_input):
+def get_past_shows_list(artist_input):
   past_shows_list = []
-  past_shows = Show.query.filter_by(venue_id=artist_input.id).filter(datetime.utcnow() > Show.start_time)
+  past_shows = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_input.id).filter(Show.start_time>datetime.now()).all()
+  # Submission 1: past_shows = Show.query.filter_by(venue_id=artist_input.id).filter(datetime.utcnow() > Show.start_time)
   for show in past_shows:
     artist_at_show = Artist.query.filter_by(id=show.artist_id).first()
     show_dict = {
@@ -357,8 +311,6 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-  # shows the artist page with the given artist_id
-  # TODO: replace with real artist data from the artist table, using artist_id
   artist = get_artist(artist_id)
   data = {
     "id" : artist.id,
@@ -372,8 +324,8 @@ def show_artist(artist_id):
     "website" : artist.website_link,
     "seeking_venue" : artist.seeking_venue,
     "seeking_description" : artist.seeking_description,
-    "past_shows": get_past_shows_list_artist(artist),
-    "upcoming_shows" : get_upcoming_shows_list_artist(artist),
+    "past_shows": get_past_shows_list(artist),
+    "upcoming_shows" : get_upcoming_shows_list(artist),
     "past_shows_count" : get_num_past_shows(artist),
     "upcoming_shows_count" : get_num_upcoming_shows(artist)
   }
@@ -398,13 +350,10 @@ def edit_artist(artist_id):
     "seeking_venue" : artist.seeking_venue,
     "seeking_description" : artist.seeking_description,
   }
-  # TODO: populate form with fields from artist with ID <artist_id>
   return render_template('forms/edit_artist.html', form=form, artist=edittable_artist)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-  # TODO: take values from the form submitted, and update existing
-  # artist record with ID <artist_id> using the new attributes
   try:
     form = ArtistForm(request.form)
     edit_artist = Artist.query.filter_by(id=artist_id).first()
@@ -517,20 +466,18 @@ def create_artist_submission():
 
 @app.route('/shows')
 def shows():
-  # displays list of shows at /shows
-  # TODO: replace with real venues data.
-  #       num_shows should be aggregated based on number of upcoming shows per venue.
-  shows = Show.query.all()
+  shows = db.session.query(Show, Venue, Artist).join(Venue, Venue.id == Show.venue_id).join(Artist, Artist.id == Show.artist_id)
+  show_idx = 0
+  venue_idx = 1
+  artist_idx = 2
   data = []
   for show in shows:
-    target_venue = Venue.query.filter_by(id=show.venue_id).first()
-    target_artist = Artist.query.filter_by(id=show.artist_id).first()
     temp_show = {
-      "venue_id" : target_venue.id,
-      "venue_name" : target_venue.name,
-      "artist_name" : target_artist.name,
-      "artist_image_link" : target_artist.image_link,
-      "start_time" : format_datetime(str(show.start_time))
+      "venue_id" : (show[venue_idx]).id,
+      "venue_name" : (show[venue_idx]).name,
+      "artist_name" : show[artist_idx].name,
+      "artist_image_link" :  show[artist_idx].image_link,
+      "start_time" : format_datetime(str(show[show_idx].start_time))
     }
     data.append(temp_show.copy())
   return render_template('pages/shows.html', shows=data)
