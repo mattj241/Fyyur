@@ -9,9 +9,6 @@ import dateutil.parser
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort
 from flask.globals import session
-from flask_moment import Moment
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from jinja2.filters import do_default
@@ -20,19 +17,11 @@ from sqlalchemy.orm import backref, relationship
 import sys
 from datetime import datetime
 import re
-from models import Show, Venue, Artist
+from models import *
 
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
-
-app = Flask(__name__)
-app.secret_key = 'some_secret'
-moment = Moment(app)
-app.config.from_object('config')
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-db.create_all()
 
 #----------------------------------------------------------------------------#
 # Helpers.

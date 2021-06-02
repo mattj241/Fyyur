@@ -1,4 +1,22 @@
-from app import db
+from flask import Flask
+from flask_moment import Moment
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+#----------------------------------------------------------------------------#
+# App Config.
+#----------------------------------------------------------------------------#
+
+app = Flask(__name__)
+app.secret_key = 'some_secret'
+moment = Moment(app)
+app.config.from_object('config')
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+db.create_all()
+
+# @ Udacity mentor, what resources do you recommend to architect a better flask app that reflects MVC? 
+# I was having trouble setting up a "controllers.py" in this dir that could somehow re-direct routes declared in app.py to controllers.py
 
 #----------------------------------------------------------------------------#
 # Models.
